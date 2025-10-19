@@ -1,0 +1,21 @@
+/* Admin-specific utilities aligned to Dark Neon Theme */
+
+/* Gradient text that works on dark backgrounds */
+.gradient-text {
+    background: linear-gradient(135deg, var(--neon-green), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Compact admin buttons (override if needed) */
+.btn.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* Minor utility for icon alignment in nav */
+.nav-item i { opacity: 0.95; }
+
+/* Ensure tables wrap nicely */
+.data-table td, .data-table th { white-space: nowrap; }
