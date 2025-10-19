@@ -224,6 +224,16 @@ class User {
     }
     
     /**
+     * Get user data by ID
+     * @param int $userId
+     * @return array|null
+     */
+    public function getUserById($userId) {
+        $query = "SELECT * FROM users WHERE user_id = :user_id";
+        return $this->db->fetchOne($query, ['user_id' => $userId]);
+    }
+    
+    /**
      * Get current user ID
      * @return int|null
      */

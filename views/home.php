@@ -59,8 +59,8 @@
                 <p class="section-subtitle">Hand-picked downloads from our store owner</p>
             <div class="products-grid">
                 <?php foreach ($featuredProducts as $product): ?>
-                <div class="product-card">
-                            <img class="product-img" src="<?php echo $product['thumbnail_image'] ? APP_URL . '/uploads/images/' . $product['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                <div class="product-card" onclick="window.location.href='product.php?slug=<?php echo $product['product_slug']; ?>'" style="cursor: pointer;">
+                            <img class="product-img" src="<?php echo $product['thumbnail_image'] ? APP_URL . '/uploads/products/' . $product['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                              alt="<?php echo htmlspecialchars($product['product_name']); ?>">
                         <?php if ($product['discount_price']): ?>
                             <span class="product-badge">Sale</span>
@@ -100,7 +100,7 @@
                                 <span class="price-current"><?php echo Utils::formatCurrency($product['price']); ?></span>
                                 <?php endif; ?>
                             </div>
-                            <button class="btn-cart" onclick="addToCart(<?php echo $product['product_id']; ?>)">
+                            <button class="btn-cart" onclick="event.stopPropagation(); addToCart(<?php echo $product['product_id']; ?>)">
                                 <i class="fas fa-shopping-cart"></i>
                             </button>
                         </div>

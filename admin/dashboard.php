@@ -34,7 +34,9 @@ $recentTransactions = $admin->getAllTransactions(1, 10);
             <h1>Dashboard</h1>
             <div class="admin-user">
                 <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
-                <a href="<?php echo APP_URL; ?>/logout.php" class="btn btn-outline btn-sm">Logout</a>
+                <a href="<?php echo APP_URL; ?>/logout.php" class="btn btn-danger btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </header>
         

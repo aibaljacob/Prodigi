@@ -41,13 +41,21 @@ class Cart {
      * Get cart items
      */
     public function getCartItems($userId) {
-        $query = "SELECT c.cart_id, p.*, s.store_name, s.store_slug
+        $query = "SELECT c.cart_id, p.*, s.store_name, s.store_slug, cat.category_name
                   FROM shopping_cart c
                   JOIN products p ON c.product_id = p.product_id
                   JOIN stores s ON p.store_id = s.store_id
+                  JOIN categories cat ON p.category_id = cat.category_id
                   WHERE c.user_id = :user_id AND p.is_active = 1 AND p.is_approved = 1
                   ORDER BY c.added_at DESC";
         return $this->db->fetchAll($query, ['user_id' => $userId]);
+    }
+    
+    /**
+     * Get cart (alias for getCartItems)
+     */
+    public function getCart($userId) {
+        return $this->getCartItems($userId);
     }
     
     /**

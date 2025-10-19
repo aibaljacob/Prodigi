@@ -88,8 +88,8 @@ define('SMTP_FROM_EMAIL', 'noreply@prodigi.com');
 define('SMTP_FROM_NAME', 'PRODIGI Marketplace');
 
 // Payment Gateway - Razorpay (Test Mode)
-define('RAZORPAY_KEY_ID', 'rzp_test_xxxxxxxxxx');
-define('RAZORPAY_KEY_SECRET', 'xxxxxxxxxxxxxxxxxxxxxx');
+define('RAZORPAY_KEY_ID', 'rzp_test_QWzUeBlDdGFSH0');
+define('RAZORPAY_KEY_SECRET', 'wXOxUom8zbtR29KYY4Ys7hYf');
 define('RAZORPAY_CURRENCY', 'INR');
 
 // Commission Settings (Can be overridden by admin settings)

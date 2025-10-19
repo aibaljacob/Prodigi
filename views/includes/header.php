@@ -18,7 +18,9 @@
     <div class="nav-actions">
             <?php if (User::isLoggedIn()): ?>
                 <?php if (User::isAdmin()): ?>
-                    <a href="<?php echo APP_URL; ?>/admin/dashboard.php" class="btn btn-outline btn-sm">Admin</a>
+                    <a href="<?php echo APP_URL; ?>/admin/dashboard.php" class="btn btn-outline btn-sm">
+                        <i class="fas fa-shield-alt"></i> Admin
+                    </a>
                 <?php endif; ?>
                 <a href="<?php echo APP_URL; ?>/cart.php" class="cart-icon" title="Cart">
                     <i class="fas fa-shopping-cart"></i>
@@ -31,9 +33,11 @@
                     <?php endif; ?>
                 </a>
                 <a href="<?php echo APP_URL; ?>/profile.php" class="icon-btn" title="Profile">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user-circle"></i>
                 </a>
-                    <a href="<?php echo APP_URL; ?>/logout.php" class="btn btn-ghost btn-sm">Logout</a>
+                <a href="<?php echo APP_URL; ?>/logout.php" class="btn btn-danger btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             <?php else: ?>
                     <a href="<?php echo APP_URL; ?>/login.php" class="btn btn-outline btn-sm">Login</a>
                     <a href="<?php echo APP_URL; ?>/register.php" class="btn btn-secondary btn-sm">Sign Up</a>

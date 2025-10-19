@@ -10,10 +10,12 @@ $category = new Category();
 
 // Get filters from query string
 $filters = [];
+$currentCategory = null;
 if (isset($_GET['category'])) {
     $cat = $category->getCategoryBySlug($_GET['category']);
     if ($cat) {
         $filters['category_id'] = $cat['category_id'];
+        $currentCategory = $cat;
     }
 }
 
@@ -46,8 +48,8 @@ $result = $product->getAllProducts($filters, $page, $limit);
 $products = $result['products'];
 $totalPages = $result['total_pages'];
 
-// Get all categories for sidebar
-$categories = $category->getAllCategories();
+// Get all active categories for sidebar
+$categories = $category->getAllCategories(true);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -122,8 +124,10 @@ $categories = $category->getAllCategories();
                             <?php 
                             if (isset($_GET['search'])) {
                                 echo 'Search: "' . htmlspecialchars($_GET['search']) . '"';
-                            } elseif (isset($_GET['category'])) {
-                                echo htmlspecialchars($cat['category_name'] ?? 'Products');
+                            } elseif ($currentCategory) {
+                                echo htmlspecialchars($currentCategory['category_name']);
+                            } elseif (isset($_GET['featured'])) {
+                                echo 'Featured Products';
                             } else {
                                 echo 'All Products';
                             }
@@ -156,9 +160,9 @@ $categories = $category->getAllCategories();
                 <?php else: ?>
                 <div class="products-grid">
                     <?php foreach ($products as $prod): ?>
-                    <div class="product-card">
+                    <div class="product-card" onclick="window.location.href='product.php?slug=<?php echo $prod['product_slug']; ?>'" style="cursor: pointer;">
                         <div class="product-image">
-                            <img src="<?php echo $prod['thumbnail_image'] ? APP_URL . '/uploads/images/' . $prod['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                            <img src="<?php echo $prod['thumbnail_image'] ? APP_URL . '/uploads/products/' . $prod['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                                  alt="<?php echo htmlspecialchars($prod['product_name']); ?>">
                             <?php if ($prod['discount_price']): ?>
                             <span class="badge badge-sale">Sale</span>
@@ -194,11 +198,11 @@ $categories = $category->getAllCategories();
                                     <?php endif; ?>
                                 </div>
                                 <?php if (User::isLoggedIn()): ?>
-                                <button class="btn-cart" onclick="addToCart(<?php echo $prod['product_id']; ?>)" title="Add to Cart">
+                                <button class="btn-cart" onclick="event.stopPropagation(); addToCart(<?php echo $prod['product_id']; ?>)" title="Add to Cart">
                                     <i class="fas fa-shopping-cart"></i>
                                 </button>
                                 <?php else: ?>
-                                <a href="login.php" class="btn-cart" title="Login to buy">
+                                <a href="login.php" class="btn-cart" onclick="event.stopPropagation();" title="Login to buy">
                                     <i class="fas fa-lock"></i>
                                 </a>
                                 <?php endif; ?>

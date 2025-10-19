@@ -297,12 +297,14 @@ class Category {
         $this->db = Database::getInstance();
     }
     
-    public function getAllCategories() {
+    public function getAllCategories($activeOnly = false) {
+        $activeFilter = $activeOnly ? "WHERE c.is_active = 1" : "";
         $query = "SELECT c.*, 
-                  (SELECT COUNT(*) FROM products p WHERE p.category_id = c.category_id AND p.is_active = 1) as product_count,
+                  (SELECT COUNT(*) FROM products p WHERE p.category_id = c.category_id AND p.is_active = 1 AND p.is_approved = 1) as product_count,
                   parent.category_name as parent_name
                   FROM categories c
                   LEFT JOIN categories parent ON c.parent_category_id = parent.category_id
+                  {$activeFilter}
                   ORDER BY c.display_order ASC, c.category_name ASC";
         return $this->db->fetchAll($query);
     }
