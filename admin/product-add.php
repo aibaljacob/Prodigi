@@ -28,6 +28,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Validate product file is uploaded (mandatory)
+        if (!isset($_FILES['product_file']) || $_FILES['product_file']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('Product file is required. Please upload a digital file for this product.');
+        }
+        
+        // Get category to check allowed file types
+        $categoryData = $category->getCategoryById($_POST['category_id']);
+        if (!$categoryData) {
+            throw new Exception('Invalid category selected');
+        }
+        
+        // Check if category has file type restrictions
+        $allowedFileTypes = null;
+        if (!empty($categoryData['allowed_file_types'])) {
+            $allowedFileTypes = json_decode($categoryData['allowed_file_types'], true);
+        }
+        
         // Handle thumbnail upload
         $thumbnailPath = null;
         if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
@@ -50,30 +67,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $productFileSize = null;
         
         if (isset($_FILES['product_file']) && $_FILES['product_file']['error'] === UPLOAD_ERR_OK) {
+            // Use category's allowed file types or default to all types
+            $fileTypes = $allowedFileTypes ?? [
+                'application/pdf',
+                'application/zip',
+                'application/x-zip-compressed',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/msword',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'image/jpeg',
+                'image/png',
+                'video/mp4',
+                'video/mpeg',
+                'video/quicktime',
+                'video/x-msvideo',
+                'audio/mpeg',
+                'audio/wav',
+                'audio/ogg',
+                'application/epub+zip'
+            ];
+            
             $fileUploader = new FileUpload(
                 UPLOAD_DIR . '/files',
-                [
-                    'application/pdf',
-                    'application/zip',
-                    'application/x-zip-compressed',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/msword',
-                    'application/vnd.ms-excel',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'application/vnd.ms-powerpoint',
-                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                    'text/plain',
-                    'image/jpeg',
-                    'image/png',
-                    'video/mp4',
-                    'audio/mpeg'
-                ],
+                $fileTypes,
                 MAX_FILE_SIZE
             );
             
             $uploadResult = $fileUploader->upload($_FILES['product_file']);
             if (!$uploadResult['success']) {
-                throw new Exception('Product file upload failed: ' . $uploadResult['message']);
+                // Provide better error message if file type is not allowed
+                $errorMsg = $uploadResult['message'];
+                if ($allowedFileTypes && strpos($errorMsg, 'File type') !== false) {
+                    $errorMsg = 'File type not allowed for this category. Allowed types: ' . implode(', ', array_map(function($type) {
+                        return strtoupper(str_replace(['application/', 'video/', 'audio/', 'image/', 'text/'], '', $type));
+                    }, $allowedFileTypes));
+                }
+                throw new Exception('Product file upload failed: ' . $errorMsg);
             }
             $productFilePath = 'uploads/files/' . $uploadResult['file_name'];
             $productFileOriginalName = $uploadResult['file_original_name'];
@@ -259,10 +292,11 @@ $categories = $category->getAllCategories();
                             
                             <div class="form-group">
                                 <label for="category_id">Category *</label>
-                                <select id="category_id" name="category_id" required class="form-control">
+                                <select id="category_id" name="category_id" required class="form-control" onchange="updateAllowedFileTypes()">
                                     <option value="">Select Category</option>
                                     <?php foreach ($categories as $cat): ?>
                                     <option value="<?php echo $cat['category_id']; ?>"
+                                            data-allowed-types="<?php echo htmlspecialchars($cat['allowed_file_types'] ?? ''); ?>"
                                             <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $cat['category_id']) ? 'selected' : ''; ?>>
                                         <?php 
                                         if (!empty($cat['parent_name'])) {
@@ -273,6 +307,10 @@ $categories = $category->getAllCategories();
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div id="allowed-file-types-info" style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: var(--radius-sm); display: none;">
+                                    <strong style="color: var(--neon-cyan);">Allowed file types for this category:</strong>
+                                    <div id="file-types-list" style="margin-top: 0.5rem; color: var(--text-secondary);"></div>
+                                </div>
                             </div>
                         </div>
                         
@@ -317,7 +355,7 @@ $categories = $category->getAllCategories();
                         </h3>
                         
                         <div class="form-group">
-                            <label>Thumbnail Image *</label>
+                            <label>Thumbnail Image (Optional)</label>
                             <div class="file-input-wrapper">
                                 <label for="thumbnail" class="file-input-btn">
                                     <i class="fas fa-cloud-upload-alt"></i> Choose Thumbnail Image
@@ -326,21 +364,21 @@ $categories = $category->getAllCategories();
                                        onchange="updateFileName(this, 'thumbnail-name')">
                                 <div id="thumbnail-name" class="file-name">No file chosen</div>
                             </div>
-                            <div class="helper-text">JPG, PNG, GIF or WebP. Max 5MB.</div>
+                            <div class="helper-text">JPG, PNG, GIF or WebP. Max 5MB. (Optional - a placeholder will be used if not provided)</div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Product File (Digital Download)</label>
+                            <label>Product File (Digital Download) *</label>
                             <div class="file-input-wrapper">
                                 <label for="product_file" class="file-input-btn">
                                     <i class="fas fa-file-upload"></i> Choose Product File
                                 </label>
-                                <input type="file" id="product_file" name="product_file"
+                                <input type="file" id="product_file" name="product_file" required
                                        onchange="updateFileName(this, 'file-name')">
                                 <div id="file-name" class="file-name">No file chosen</div>
                             </div>
                             <div class="helper-text">
-                                PDF, ZIP, Documents, Images, Videos, etc. Max <?php echo MAX_FILE_SIZE / (1024 * 1024 * 1024); ?>GB.
+                                PDF, ZIP, Documents, Images, Videos, etc. Max <?php echo MAX_FILE_SIZE / (1024 * 1024 * 1024); ?>GB. (Required)
                             </div>
                         </div>
                         
@@ -384,6 +422,51 @@ $categories = $category->getAllCategories();
                 display.style.color = 'var(--text-secondary)';
             }
         }
+        
+        function updateAllowedFileTypes() {
+            const select = document.getElementById('category_id');
+            const selectedOption = select.options[select.selectedIndex];
+            const allowedTypes = selectedOption.getAttribute('data-allowed-types');
+            const infoBox = document.getElementById('allowed-file-types-info');
+            const listDiv = document.getElementById('file-types-list');
+            
+            if (allowedTypes && allowedTypes !== 'null' && allowedTypes !== '') {
+                try {
+                    const types = JSON.parse(allowedTypes);
+                    if (types && types.length > 0) {
+                        // Create friendly names for MIME types
+                        const friendlyNames = types.map(type => {
+                            const parts = type.split('/');
+                            let name = parts[parts.length - 1].toUpperCase();
+                            // Clean up common patterns
+                            name = name.replace('VND.OPENXMLFORMATS-OFFICEDOCUMENT.', '');
+                            name = name.replace('VND.MS-', '');
+                            name = name.replace('X-', '');
+                            name = name.replace('WORDPROCESSINGML.DOCUMENT', 'DOCX');
+                            name = name.replace('SPREADSHEETML.SHEET', 'XLSX');
+                            name = name.replace('PRESENTATIONML.PRESENTATION', 'PPTX');
+                            name = name.replace('ZIP-COMPRESSED', 'ZIP');
+                            name = name.replace('EPUB+ZIP', 'EPUB');
+                            return name;
+                        });
+                        
+                        listDiv.innerHTML = friendlyNames.join(', ');
+                        infoBox.style.display = 'block';
+                    } else {
+                        infoBox.style.display = 'none';
+                    }
+                } catch (e) {
+                    infoBox.style.display = 'none';
+                }
+            } else {
+                infoBox.style.display = 'none';
+            }
+        }
+        
+        // Call on page load if category is selected
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAllowedFileTypes();
+        });
     </script>
 </body>
 </html>

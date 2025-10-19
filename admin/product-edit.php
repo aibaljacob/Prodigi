@@ -41,6 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Get category to check allowed file types
+        $categoryData = $category->getCategoryById($_POST['category_id']);
+        if (!$categoryData) {
+            throw new Exception('Invalid category selected');
+        }
+        
+        // Check if category has file type restrictions
+        $allowedFileTypes = null;
+        if (!empty($categoryData['allowed_file_types'])) {
+            $allowedFileTypes = json_decode($categoryData['allowed_file_types'], true);
+        }
+        
         // Handle thumbnail upload (if new file provided)
         $thumbnailPath = $productData['thumbnail_image'] ?? null;
         if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
@@ -69,30 +81,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $productFileSize = $productData['product_file_size_bytes'] ?? null;
         
         if (isset($_FILES['product_file']) && $_FILES['product_file']['error'] === UPLOAD_ERR_OK) {
+            // Use category's allowed file types or default to all types
+            $fileTypes = $allowedFileTypes ?? [
+                'application/pdf',
+                'application/zip',
+                'application/x-zip-compressed',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/msword',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'image/jpeg',
+                'image/png',
+                'video/mp4',
+                'video/mpeg',
+                'video/quicktime',
+                'video/x-msvideo',
+                'audio/mpeg',
+                'audio/wav',
+                'audio/ogg',
+                'application/epub+zip'
+            ];
+            
             $fileUploader = new FileUpload(
                 UPLOAD_DIR . '/files',
-                [
-                    'application/pdf',
-                    'application/zip',
-                    'application/x-zip-compressed',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/msword',
-                    'application/vnd.ms-excel',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'application/vnd.ms-powerpoint',
-                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                    'text/plain',
-                    'image/jpeg',
-                    'image/png',
-                    'video/mp4',
-                    'audio/mpeg'
-                ],
+                $fileTypes,
                 MAX_FILE_SIZE
             );
             
             $uploadResult = $fileUploader->upload($_FILES['product_file']);
             if (!$uploadResult['success']) {
-                throw new Exception('Product file upload failed: ' . $uploadResult['message']);
+                // Provide better error message if file type is not allowed
+                $errorMsg = $uploadResult['message'];
+                if ($allowedFileTypes && strpos($errorMsg, 'File type') !== false) {
+                    $errorMsg = 'File type not allowed for this category. Allowed types: ' . implode(', ', array_map(function($type) {
+                        return strtoupper(str_replace(['application/', 'video/', 'audio/', 'image/', 'text/'], '', $type));
+                    }, $allowedFileTypes));
+                }
+                throw new Exception('Product file upload failed: ' . $errorMsg);
             }
             
             // Delete old product file
@@ -103,6 +131,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $productFilePath = 'uploads/files/' . $uploadResult['file_name'];
             $productFileOriginalName = $uploadResult['file_original_name'];
             $productFileSize = $uploadResult['file_size_bytes'];
+        }
+        
+        // Validate that product has a file (either existing or newly uploaded)
+        if (empty($productFilePath)) {
+            throw new Exception('Product file is required. Please upload a digital file for this product.');
         }
         
         // Prepare product data
@@ -393,7 +426,7 @@ $categories = $category->getAllCategories();
                         </h3>
                         
                         <div class="form-group">
-                            <label>Thumbnail Image</label>
+                            <label>Thumbnail Image (Optional)</label>
                             
                             <?php if (!empty($productData['thumbnail_image'])): ?>
                             <div class="current-file">
@@ -415,11 +448,11 @@ $categories = $category->getAllCategories();
                                        onchange="updateFileName(this, 'thumbnail-name')">
                                 <div id="thumbnail-name" class="file-name">No file chosen</div>
                             </div>
-                            <div class="helper-text">JPG, PNG, GIF or WebP. Max 5MB.</div>
+                            <div class="helper-text">JPG, PNG, GIF or WebP. Max 5MB. (Optional)</div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Product File (Digital Download)</label>
+                            <label>Product File (Digital Download) *</label>
                             
                             <?php if (!empty($productData['product_file_path'])): ?>
                             <div class="current-file">
@@ -429,6 +462,10 @@ $categories = $category->getAllCategories();
                                     <small><?php echo !empty($productData['product_file_size_bytes']) ? FileUpload::formatFileSize($productData['product_file_size_bytes']) : 'Unknown size'; ?></small>
                                 </div>
                             </div>
+                            <?php else: ?>
+                            <div class="helper-text" style="color: var(--neon-yellow); margin-bottom: 1rem;">
+                                <i class="fas fa-exclamation-triangle"></i> No product file uploaded yet. Please upload a file.
+                            </div>
                             <?php endif; ?>
                             
                             <div class="file-input-wrapper">
@@ -437,11 +474,12 @@ $categories = $category->getAllCategories();
                                     <?php echo !empty($productData['product_file_path']) ? 'Replace' : 'Upload'; ?> Product File
                                 </label>
                                 <input type="file" id="product_file" name="product_file"
+                                       <?php echo empty($productData['product_file_path']) ? 'required' : ''; ?>
                                        onchange="updateFileName(this, 'file-name')">
                                 <div id="file-name" class="file-name">No file chosen</div>
                             </div>
                             <div class="helper-text">
-                                PDF, ZIP, Documents, Images, Videos, etc. Max <?php echo MAX_FILE_SIZE / (1024 * 1024 * 1024); ?>GB.
+                                PDF, ZIP, Documents, Images, Videos, etc. Max <?php echo MAX_FILE_SIZE / (1024 * 1024 * 1024); ?>GB. (Required)
                             </div>
                         </div>
                         

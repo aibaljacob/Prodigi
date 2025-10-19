@@ -245,7 +245,7 @@ $cartTotal = $cart->getCartTotal($userId);
                     
                     <?php foreach ($cartItems as $item): ?>
                     <div class="cart-item" data-cart-id="<?php echo $item['cart_id']; ?>">
-                        <img src="<?php echo $item['thumbnail_image'] ? APP_URL . '/uploads/products/' . $item['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                        <img src="<?php echo $item['thumbnail_image'] ? APP_URL . '/' . $item['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                              alt="<?php echo htmlspecialchars($item['product_name']); ?>"
                              class="cart-item-image">
                         

@@ -21,7 +21,7 @@
                 <p>Curated downloads from the store owner. Browse, buy, and get instant access—simple and secure.</p>
                 <div class="hero-buttons">
                     <a href="products.php" class="btn btn-secondary btn-lg">Explore Products</a>
-                    <a href="categories.php" class="btn btn-primary btn-lg">Browse Categories</a>
+                    
                 </div>
             </div>
         </div>
@@ -32,17 +32,14 @@
         <div class="container">
             <h2 class="section-title">Browse Categories</h2>
             <p class="section-subtitle">Explore our diverse collection of digital products across multiple categories</p>
-            <div class="categories-grid">
+            <div class="categories-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
                 <?php $i = 0; foreach ($categories as $category): $i++; 
                     $accents = ['accent-cyan','accent-blue','accent-purple','accent-pink','accent-amber','accent-teal'];
                     $accentClass = $accents[($i - 1) % count($accents)];
                 ?>
-                <a href="products.php?category=<?php echo $category['category_slug']; ?>" class="category-card <?php echo $accentClass; ?>">
-                    <div class="category-icon">
-                        <i class="<?php echo $category['category_icon']; ?>"></i>
-                    </div>
-                    <h3 class="category-name"><?php echo htmlspecialchars($category['category_name']); ?></h3>
-                    <p class="category-count"><?php echo htmlspecialchars($category['category_description']); ?></p>
+                <a href="products.php?category=<?php echo $category['category_slug']; ?>" class="category-card <?php echo $accentClass; ?>" style="padding: 1.5rem; text-align: left;">
+                    <h3 class="category-name" style="font-size: 1.125rem; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($category['category_name']); ?></h3>
+                    <p class="category-count" style="font-size: 0.875rem; margin: 0;"><?php echo htmlspecialchars($category['category_description'] ?? 'Discover products'); ?></p>
                 </a>
                 <?php endforeach; ?>
             </div>
@@ -60,49 +57,36 @@
             <div class="products-grid">
                 <?php foreach ($featuredProducts as $product): ?>
                 <div class="product-card" onclick="window.location.href='product.php?slug=<?php echo $product['product_slug']; ?>'" style="cursor: pointer;">
-                            <img class="product-img" src="<?php echo $product['thumbnail_image'] ? APP_URL . '/uploads/products/' . $product['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
-                             alt="<?php echo htmlspecialchars($product['product_name']); ?>">
-                        <?php if ($product['discount_price']): ?>
-                            <span class="product-badge">Sale</span>
-                        <?php endif; ?>
-                            <?php if (!$product['discount_price']): ?>
-                            <span class="product-badge">Featured</span>
-                            <?php endif; ?>
+                    <img class="product-img" src="<?php echo $product['thumbnail_image'] ? APP_URL . '/' . $product['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                         alt="<?php echo htmlspecialchars($product['product_name']); ?>">
+                    <?php if ($product['discount_price']): ?>
+                        <span class="product-badge">Sale</span>
+                    <?php else: ?>
+                        <span class="product-badge">Featured</span>
+                    <?php endif; ?>
                     <div class="product-info">
                         <h3 class="product-title">
-                            <a href="product.php?slug=<?php echo $product['product_slug']; ?>">
-                                <?php echo htmlspecialchars($product['product_name']); ?>
-                            </a>
+                            <?php echo htmlspecialchars($product['product_name']); ?>
                         </h3>
-                        <!-- Single-vendor: hide seller/store line -->
-                            <div class="product-footer">
-                                <div class="product-price">
-                                    ₹<?php echo number_format($product['discount_price'] ?: $product['price'], 0); ?>
-                                </div>
+                        <p style="color: var(--text-muted); font-size: 0.875rem; margin: 0.5rem 0;">
+                            <?php echo htmlspecialchars(Utils::truncate($product['short_description'] ?? '', 80)); ?>
+                        </p>
                         <div class="product-rating">
                             <?php 
                             $rating = floor($product['rating_average']);
                             for ($i = 1; $i <= 5; $i++): 
                             ?>
-                                    <i class="fas fa-star <?php echo $i <= $rating ? '' : 'text-muted'; ?>"></i>
+                                <i class="fas fa-star <?php echo $i <= $rating ? '' : 'text-muted'; ?>"></i>
                             <?php endfor; ?>
                             <span>(<?php echo $product['total_reviews']; ?>)</span>
                         </div>
-                            </div>
-                        </div>
-                    </div>
-                        <div class="product-footer">
-                            <div class="product-price">
-                                <?php if ($product['discount_price']): ?>
-                                <span class="price-original"><?php echo Utils::formatCurrency($product['price']); ?></span>
-                                <span class="price-current"><?php echo Utils::formatCurrency($product['discount_price']); ?></span>
-                                <?php else: ?>
-                                <span class="price-current"><?php echo Utils::formatCurrency($product['price']); ?></span>
-                                <?php endif; ?>
-                            </div>
-                            <button class="btn-cart" onclick="event.stopPropagation(); addToCart(<?php echo $product['product_id']; ?>)">
-                                <i class="fas fa-shopping-cart"></i>
-                            </button>
+                        <div class="product-price" style="margin-top: 1rem;">
+                            <?php if ($product['discount_price']): ?>
+                            <span class="price-original"><?php echo Utils::formatCurrency($product['price']); ?></span>
+                            <span class="price-current"><?php echo Utils::formatCurrency($product['discount_price']); ?></span>
+                            <?php else: ?>
+                            <span class="price-current"><?php echo Utils::formatCurrency($product['price']); ?></span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

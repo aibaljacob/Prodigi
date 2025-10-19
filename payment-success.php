@@ -190,7 +190,7 @@ $totalAmount = array_sum(array_column($purchases, 'total_amount'));
                 
                 <?php foreach ($purchases as $purchase): ?>
                 <div class="purchased-item">
-                    <img src="<?php echo $purchase['thumbnail_image'] ? APP_URL . '/uploads/products/' . $purchase['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                    <img src="<?php echo $purchase['thumbnail_image'] ? APP_URL . '/' . $purchase['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                          alt="<?php echo htmlspecialchars($purchase['product_name']); ?>"
                          class="purchased-item-image">
                     

@@ -42,10 +42,12 @@ if (empty($transaction['product_file_path'])) {
     die('File not available for this product');
 }
 
-$filePath = UPLOADS_PATH . '/files/' . $transaction['product_file_path'];
+// The product_file_path already contains 'uploads/files/filename', so just use base directory
+$filePath = __DIR__ . '/' . $transaction['product_file_path'];
 
 if (!file_exists($filePath)) {
     error_log("Download file not found: " . $filePath);
+    error_log("Expected path from DB: " . $transaction['product_file_path']);
     die('File not found. Please contact support.');
 }
 

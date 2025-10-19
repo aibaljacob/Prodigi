@@ -7,7 +7,6 @@
     <ul class="nav-links nav-center" id="navMenu">
             <li><a href="<?php echo APP_URL; ?>">Home</a></li>
             <li><a href="<?php echo APP_URL; ?>/products.php">Products</a></li>
-            <li><a href="<?php echo APP_URL; ?>/categories.php">Categories</a></li>
             <?php if (User::isLoggedIn()): ?>
                 <?php if (User::isSeller()): ?>
                 <!-- Single-vendor mode: no seller dashboard -->

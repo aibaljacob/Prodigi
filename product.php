@@ -32,6 +32,36 @@ $relatedProducts = array_filter($relatedResult['products'], function($p) use ($p
     return $p['product_id'] != $productData['product_id'];
 });
 $relatedProducts = array_slice($relatedProducts, 0, 3);
+
+// Get reviews for this product
+$db = Database::getInstance();
+$reviews = $db->fetchAll(
+    "SELECT r.*, u.username, u.full_name 
+     FROM reviews r 
+     JOIN users u ON r.user_id = u.user_id 
+     WHERE r.product_id = :product_id AND r.is_approved = 1 
+     ORDER BY r.created_at DESC",
+    ['product_id' => $productData['product_id']]
+);
+
+// Check if current user can review (must have purchased)
+$canReview = false;
+$hasReviewed = false;
+if (User::isLoggedIn()) {
+    $userId = $_SESSION['user_id'];
+    $hasPurchased = $db->fetchOne(
+        "SELECT COUNT(*) as count FROM transactions 
+         WHERE buyer_id = :user_id AND product_id = :product_id AND payment_status = 'completed'",
+        ['user_id' => $userId, 'product_id' => $productData['product_id']]
+    );
+    $canReview = $hasPurchased['count'] > 0;
+    
+    $existingReview = $db->fetchOne(
+        "SELECT review_id FROM reviews WHERE user_id = :user_id AND product_id = :product_id",
+        ['user_id' => $userId, 'product_id' => $productData['product_id']]
+    );
+    $hasReviewed = !empty($existingReview);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -273,7 +303,7 @@ $relatedProducts = array_slice($relatedProducts, 0, 3);
         <div class="product-detail">
             <!-- Product Image -->
             <div class="product-image-section">
-                <img src="<?php echo $productData['thumbnail_image'] ? APP_URL . '/uploads/products/' . $productData['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                <img src="<?php echo $productData['thumbnail_image'] ? APP_URL . '/' . $productData['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                      alt="<?php echo htmlspecialchars($productData['product_name']); ?>"
                      class="product-main-image">
             </div>
@@ -389,6 +419,87 @@ $relatedProducts = array_slice($relatedProducts, 0, 3);
         </div>
         <?php endif; ?>
         
+        <!-- Reviews Section -->
+        <div class="product-reviews" style="margin-top: 3rem;">
+            <h2>Customer Reviews</h2>
+            
+            <?php if ($canReview && !$hasReviewed): ?>
+            <!-- Add Review Form -->
+            <div class="review-form-container" style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-md); margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1.5rem;">Write a Review</h3>
+                <form id="reviewForm" style="max-width: 600px;">
+                    <input type="hidden" name="product_id" value="<?php echo $productData['product_id']; ?>">
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Rating</label>
+                        <div class="rating-input" style="display: flex; gap: 0.5rem; font-size: 1.5rem;">
+                            <i class="far fa-star" data-rating="1" onclick="setRating(1)" style="cursor: pointer; color: var(--text-muted);"></i>
+                            <i class="far fa-star" data-rating="2" onclick="setRating(2)" style="cursor: pointer; color: var(--text-muted);"></i>
+                            <i class="far fa-star" data-rating="3" onclick="setRating(3)" style="cursor: pointer; color: var(--text-muted);"></i>
+                            <i class="far fa-star" data-rating="4" onclick="setRating(4)" style="cursor: pointer; color: var(--text-muted);"></i>
+                            <i class="far fa-star" data-rating="5" onclick="setRating(5)" style="cursor: pointer; color: var(--text-muted);"></i>
+                        </div>
+                        <input type="hidden" name="rating" id="ratingValue" required>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Review Title</label>
+                        <input type="text" name="review_title" maxlength="200" placeholder="Sum up your experience" 
+                               style="width: 100%; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);" required>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Your Review</label>
+                        <textarea name="review_text" rows="4" placeholder="Tell us about your experience with this product" 
+                                  style="width: 100%; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); resize: vertical;" required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Review
+                    </button>
+                </form>
+            </div>
+            <?php elseif ($hasReviewed): ?>
+            <p style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 2rem;">
+                <i class="fas fa-check-circle" style="color: var(--neon-green);"></i> You have already reviewed this product.
+            </p>
+            <?php elseif (User::isLoggedIn()): ?>
+            <p style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 2rem;">
+                <i class="fas fa-info-circle"></i> Purchase this product to leave a review.
+            </p>
+            <?php endif; ?>
+            
+            <!-- Reviews List -->
+            <?php if (!empty($reviews)): ?>
+            <div class="reviews-list">
+                <?php foreach ($reviews as $review): ?>
+                <div class="review-item" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <i class="fas fa-star" style="color: <?php echo $i <= $review['rating'] ? 'var(--neon-green)' : 'var(--text-muted)'; ?>; font-size: 0.875rem;"></i>
+                                <?php endfor; ?>
+                            </div>
+                            <h4 style="margin: 0; font-size: 1rem; font-weight: 600;"><?php echo htmlspecialchars($review['review_title']); ?></h4>
+                        </div>
+                        <span style="color: var(--text-muted); font-size: 0.875rem;"><?php echo Utils::timeAgo($review['created_at']); ?></span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 0.75rem;"><?php echo nl2br(htmlspecialchars($review['review_text'])); ?></p>
+                    <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.875rem; color: var(--text-muted);">
+                        <span><i class="fas fa-user"></i> <?php echo htmlspecialchars($review['full_name'] ?: $review['username']); ?></span>
+                        <?php if ($review['is_verified_purchase']): ?>
+                        <span style="color: var(--neon-green);"><i class="fas fa-check-circle"></i> Verified Purchase</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <p style="text-align: center; padding: 2rem; color: var(--text-muted);">No reviews yet. Be the first to review this product!</p>
+            <?php endif; ?>
+        </div>
+        
         <!-- Related Products -->
         <?php if (!empty($relatedProducts)): ?>
         <div class="related-products">
@@ -397,7 +508,7 @@ $relatedProducts = array_slice($relatedProducts, 0, 3);
                 <?php foreach ($relatedProducts as $relatedProduct): ?>
                 <div class="product-card">
                     <img class="product-img" 
-                         src="<?php echo $relatedProduct['thumbnail_image'] ? APP_URL . '/uploads/products/' . $relatedProduct['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                         src="<?php echo $relatedProduct['thumbnail_image'] ? APP_URL . '/' . $relatedProduct['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                          alt="<?php echo htmlspecialchars($relatedProduct['product_name']); ?>">
                     <?php if ($relatedProduct['discount_price']): ?>
                         <span class="product-badge">Sale</span>
@@ -432,6 +543,68 @@ $relatedProducts = array_slice($relatedProducts, 0, 3);
     <?php include VIEWS_PATH . '/includes/footer.php'; ?>
     
     <script>
+        let selectedRating = 0;
+        
+        function setRating(rating) {
+            selectedRating = rating;
+            document.getElementById('ratingValue').value = rating;
+            
+            // Update star display
+            document.querySelectorAll('.rating-input i').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('far');
+                    star.classList.add('fas');
+                    star.style.color = 'var(--neon-green)';
+                } else {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                    star.style.color = 'var(--text-muted)';
+                }
+            });
+        }
+        
+        // Handle review form submission
+        <?php if ($canReview && !$hasReviewed): ?>
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (selectedRating === 0) {
+                alert('Please select a rating');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            const data = {
+                action: 'add_review',
+                product_id: formData.get('product_id'),
+                rating: formData.get('rating'),
+                review_title: formData.get('review_title'),
+                review_text: formData.get('review_text')
+            };
+            
+            fetch('<?php echo APP_URL; ?>/api/reviews.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Review submitted successfully!');
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to submit review');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred');
+            });
+        });
+        <?php endif; ?>
+        
         function addToCart(productId) {
             <?php if (!User::isLoggedIn()): ?>
             window.location.href = '<?php echo APP_URL; ?>/login.php?redirect=' + encodeURIComponent(window.location.href);

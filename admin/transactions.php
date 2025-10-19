@@ -194,7 +194,7 @@ $totals = $db->fetchOne($totalsQuery, $params);
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
+                                        <th style="width: 60px;">S.No</th>
                                         <th>Date</th>
                                         <th>Buyer</th>
                                         <th>Product</th>
@@ -204,9 +204,12 @@ $totals = $db->fetchOne($totalsQuery, $params);
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($transactions as $txn): ?>
+                                    <?php 
+                                    $serialNo = ($page - 1) * $limit + 1;
+                                    foreach ($transactions as $txn): 
+                                    ?>
                                     <tr>
-                                        <td><strong>#<?php echo $txn['transaction_id']; ?></strong></td>
+                                        <td><strong><?php echo $serialNo++; ?></strong></td>
                                         <td>
                                             <?php echo date('M d, Y', strtotime($txn['transaction_date'])); ?><br>
                                             <small style="color: var(--text-secondary);">

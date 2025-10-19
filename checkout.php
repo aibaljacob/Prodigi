@@ -220,7 +220,7 @@ if (!isset($_SESSION['csrf_token'])) {
                     
                     <?php foreach ($cartItems as $item): ?>
                     <div class="order-item">
-                        <img src="<?php echo $item['thumbnail_image'] ? APP_URL . '/uploads/products/' . $item['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                        <img src="<?php echo $item['thumbnail_image'] ? APP_URL . '/' . $item['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                              alt="<?php echo htmlspecialchars($item['product_name']); ?>"
                              class="order-item-image">
                         

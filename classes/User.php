@@ -251,8 +251,19 @@ class User {
         try {
             $updateData = [];
             
-            if (isset($data['full_name'])) {
-                $updateData['full_name'] = $data['full_name'];
+            // Handle username with uniqueness validation
+            if (isset($data['username'])) {
+                // Check if username is already taken by another user
+                $existingUser = $this->db->fetchOne(
+                    'SELECT user_id FROM users WHERE username = :username AND user_id != :user_id',
+                    ['username' => $data['username'], 'user_id' => $userId]
+                );
+                
+                if ($existingUser) {
+                    return ['success' => false, 'message' => 'Username is already taken'];
+                }
+                
+                $updateData['username'] = $data['username'];
             }
             
             if (isset($data['phone'])) {

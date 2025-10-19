@@ -135,8 +135,8 @@ $categories = $category->getAllCategories();
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Product</th>
+                                        <th style="width: 60px;">S.No</th>
+                                        <th>Product Name</th>
                                         <th>Category</th>
                                         <th>Price</th>
                                         <th>Sales</th>
@@ -145,19 +145,20 @@ $categories = $category->getAllCategories();
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($products as $prod): ?>
+                                    <?php 
+                                    $serialNo = ($page - 1) * $limit + 1;
+                                    foreach ($products as $prod): 
+                                    ?>
                                     <tr>
-                                        <td>#<?php echo $prod['product_id']; ?></td>
+                                        <td><?php echo $serialNo++; ?></td>
                                         <td>
-                                            <div class="product-cell">
-                                                <img src="<?php echo $prod['thumbnail_image'] ? APP_URL . '/uploads/images/' . $prod['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
-                                                     alt="" class="product-thumb">
-                                                <div>
-                                                    <strong><?php echo htmlspecialchars(Utils::truncate($prod['product_name'], 40)); ?></strong>
-                                                    <?php if ($prod['is_featured']): ?>
-                                                        <span class="badge badge-featured">Featured</span>
-                                                    <?php endif; ?>
-                                                </div>
+                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                <strong><?php echo htmlspecialchars(Utils::truncate($prod['product_name'], 50)); ?></strong>
+                                                <?php if ($prod['is_featured']): ?>
+                                                    <span class="badge badge-featured" style="width: fit-content;">
+                                                        <i class="fas fa-star"></i> Featured
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         <td><?php echo htmlspecialchars($prod['category_name']); ?></td>

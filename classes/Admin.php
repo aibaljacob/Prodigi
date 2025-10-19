@@ -92,6 +92,7 @@ class Admin {
                       FROM transactions t
                       JOIN users buyer ON t.buyer_id = buyer.user_id
                       JOIN products p ON t.product_id = p.product_id
+                      WHERE t.payment_status IN ('completed', 'failed')
                       ORDER BY t.transaction_date DESC
                       LIMIT :limit OFFSET :offset";
         } else {
@@ -103,6 +104,7 @@ class Admin {
                       JOIN users buyer ON t.buyer_id = buyer.user_id
                       JOIN users seller ON t.seller_id = seller.user_id
                       JOIN products p ON t.product_id = p.product_id
+                      WHERE t.payment_status IN ('completed', 'failed')
                       ORDER BY t.transaction_date DESC
                       LIMIT :limit OFFSET :offset";
         }

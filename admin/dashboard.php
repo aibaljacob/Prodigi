@@ -12,7 +12,6 @@ if (!User::isAdmin()) {
 
 $admin = new Admin();
 $stats = $admin->getDashboardStats();
-$pendingProducts = $admin->getPendingProductApprovals();
 $recentTransactions = $admin->getAllTransactions(1, 10);
 ?>
 <!DOCTYPE html>
@@ -84,42 +83,6 @@ $recentTransactions = $admin->getAllTransactions(1, 10);
                 </div>
             </div>
             
-            <!-- Pending Products (single-vendor) -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h2><i class="fas fa-box"></i> Pending Product Approvals</h2>
-                    <span class="badge"><?php echo count($pendingProducts); ?></span>
-                </div>
-                <div class="card-body">
-                    <?php if (empty($pendingProducts)): ?>
-                        <p class="text-muted">No pending product approvals</p>
-                    <?php else: ?>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Product Name</th>
-                                    <th>Price</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach (array_slice($pendingProducts, 0, 5) as $product): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($product['product_name']); ?></td>
-                                    <td><?php echo Utils::formatCurrency($product['price']); ?></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-success" onclick="approveProduct(<?php echo $product['product_id']; ?>)">
-                                            <i class="fas fa-check"></i> Approve
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
             <!-- Recent Transactions -->
             <div class="dashboard-card">
                 <div class="card-header">
@@ -129,7 +92,7 @@ $recentTransactions = $admin->getAllTransactions(1, 10);
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th style="width: 60px;">S.No</th>
                                 <th>Buyer</th>
                                 <th>Product</th>
                                 <th>Amount</th>
@@ -138,9 +101,12 @@ $recentTransactions = $admin->getAllTransactions(1, 10);
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($recentTransactions as $transaction): ?>
+                            <?php 
+                            $serialNo = 1;
+                            foreach ($recentTransactions as $transaction): 
+                            ?>
                             <tr>
-                                <td>#<?php echo $transaction['transaction_id']; ?></td>
+                                <td><?php echo $serialNo++; ?></td>
                                 <td><?php echo htmlspecialchars($transaction['buyer_username']); ?></td>
                                 <td><?php echo htmlspecialchars(Utils::truncate($transaction['product_name'], 30)); ?></td>
                                 <td><?php echo Utils::formatCurrency($transaction['amount']); ?></td>

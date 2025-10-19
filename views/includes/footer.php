@@ -18,28 +18,19 @@
                 <h3>Shop</h3>
                 <ul>
                     <li><a href="<?php echo APP_URL; ?>/products.php">All Products</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/categories.php">Categories</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/products.php?featured=1">Featured Products</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/products.php?sort=popular">Top Selling</a></li>
+                    <li><a href="<?php echo APP_URL; ?>/cart.php">Shopping Cart</a></li>
                 </ul>
             </div>
             
             <div class="footer-section">
-                <h3>Help & Support</h3>
+                <h3>Account</h3>
                 <ul>
-                    <li><a href="<?php echo APP_URL; ?>/help.php">Help Center</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/contact.php">Contact Us</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/orders.php">Your Orders</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/downloads.php">Your Downloads</a></li>
-                </ul>
-            </div>
-            
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <ul>
-                    <li><a href="<?php echo APP_URL; ?>/terms.php">Terms of Service</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/terms.php">Terms of Service</a></li>
-                    <li><a href="<?php echo APP_URL; ?>/privacy.php">Privacy Policy</a></li>
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <li><a href="<?php echo APP_URL; ?>/profile.php">Your Profile</a></li>
+                    <?php else: ?>
+                        <li><a href="<?php echo APP_URL; ?>/login.php">Login</a></li>
+                        <li><a href="<?php echo APP_URL; ?>/register.php">Register</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>

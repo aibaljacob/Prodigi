@@ -19,11 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     Utils::validateCSRF($_POST['csrf_token'] ?? '');
     
     if ($_POST['action'] === 'add') {
+        // Handle allowed file types
+        $allowedFileTypes = isset($_POST['allowed_file_types']) ? array_values($_POST['allowed_file_types']) : [];
+        
         $data = [
             'category_name' => $_POST['category_name'] ?? '',
             'category_description' => $_POST['category_description'] ?? '',
             'parent_category_id' => !empty($_POST['parent_category_id']) ? intval($_POST['parent_category_id']) : null,
             'display_order' => !empty($_POST['display_order']) ? intval($_POST['display_order']) : 0,
+            'allowed_file_types' => !empty($allowedFileTypes) ? json_encode($allowedFileTypes) : null,
             'is_active' => 1
         ];
         
@@ -33,11 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     
     if ($_POST['action'] === 'update' && isset($_POST['category_id'])) {
+        // Handle allowed file types
+        $allowedFileTypes = isset($_POST['allowed_file_types']) ? array_values($_POST['allowed_file_types']) : [];
+        
         $data = [
             'category_name' => $_POST['category_name'] ?? '',
             'category_description' => $_POST['category_description'] ?? '',
             'parent_category_id' => !empty($_POST['parent_category_id']) ? intval($_POST['parent_category_id']) : null,
             'display_order' => !empty($_POST['display_order']) ? intval($_POST['display_order']) : 0,
+            'allowed_file_types' => !empty($allowedFileTypes) ? json_encode($allowedFileTypes) : null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0
         ];
         
@@ -139,6 +147,83 @@ $categories = $category->getAllCategories();
                                        class="form-control">
                             </div>
                             
+                            <div class="form-group">
+                                <label>Allowed File Types for Products</label>
+                                <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm);">
+                                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem;">
+                                        Select which file types are allowed for products in this category. Leave all unchecked to allow any file type.
+                                    </p>
+                                    <?php
+                                    $currentAllowedTypes = [];
+                                    if ($editCategory && !empty($editCategory['allowed_file_types'])) {
+                                        $currentAllowedTypes = json_decode($editCategory['allowed_file_types'], true) ?? [];
+                                    }
+                                    
+                                    $fileTypeGroups = [
+                                        'Audio Files' => [
+                                            'audio/mpeg' => 'MP3',
+                                            'audio/wav' => 'WAV',
+                                            'audio/ogg' => 'OGG',
+                                            'audio/aac' => 'AAC'
+                                        ],
+                                        'Video Files' => [
+                                            'video/mp4' => 'MP4',
+                                            'video/mpeg' => 'MPEG',
+                                            'video/quicktime' => 'MOV',
+                                            'video/x-msvideo' => 'AVI'
+                                        ],
+                                        'Documents' => [
+                                            'application/pdf' => 'PDF',
+                                            'application/msword' => 'DOC',
+                                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'DOCX',
+                                            'text/plain' => 'TXT'
+                                        ],
+                                        'Spreadsheets' => [
+                                            'application/vnd.ms-excel' => 'XLS',
+                                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'XLSX',
+                                            'text/csv' => 'CSV'
+                                        ],
+                                        'Presentations' => [
+                                            'application/vnd.ms-powerpoint' => 'PPT',
+                                            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'PPTX'
+                                        ],
+                                        'Images' => [
+                                            'image/jpeg' => 'JPG/JPEG',
+                                            'image/png' => 'PNG',
+                                            'image/gif' => 'GIF',
+                                            'image/webp' => 'WEBP',
+                                            'image/svg+xml' => 'SVG'
+                                        ],
+                                        'Archives' => [
+                                            'application/zip' => 'ZIP',
+                                            'application/x-zip-compressed' => 'ZIP (Alt)',
+                                            'application/x-rar-compressed' => 'RAR',
+                                            'application/x-7z-compressed' => '7Z'
+                                        ],
+                                        'E-Books' => [
+                                            'application/epub+zip' => 'EPUB',
+                                            'application/x-mobipocket-ebook' => 'MOBI'
+                                        ]
+                                    ];
+                                    ?>
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                        <?php foreach ($fileTypeGroups as $groupName => $types): ?>
+                                        <div>
+                                            <strong style="display: block; margin-bottom: 0.5rem; color: var(--neon-cyan);"><?php echo $groupName; ?></strong>
+                                            <?php foreach ($types as $mimeType => $label): ?>
+                                            <label style="display: block; margin-bottom: 0.25rem; cursor: pointer;">
+                                                <input type="checkbox" name="allowed_file_types[]" value="<?php echo htmlspecialchars($mimeType); ?>"
+                                                       <?php echo in_array($mimeType, $currentAllowedTypes) ? 'checked' : ''; ?>>
+                                                <?php echo htmlspecialchars($label); ?>
+                                            </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <?php if ($editCategory): ?>
                             <div class="form-group">
                                 <label class="checkbox-label">
@@ -178,7 +263,7 @@ $categories = $category->getAllCategories();
                                         <strong><?php echo htmlspecialchars($cat['category_name']); ?></strong>
                                         <small>
                                             Slug: <?php echo htmlspecialchars($cat['category_slug']); ?>
-                                            <?php if ($cat['parent_id']): ?>
+                                            <?php if (!empty($cat['parent_id'])): ?>
                                                 | Parent: 
                                                 <?php 
                                                 $parent = array_filter($categories, fn($c) => $c['category_id'] == $cat['parent_id']);

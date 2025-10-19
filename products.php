@@ -162,7 +162,7 @@ $categories = $category->getAllCategories(true);
                     <?php foreach ($products as $prod): ?>
                     <div class="product-card" onclick="window.location.href='product.php?slug=<?php echo $prod['product_slug']; ?>'" style="cursor: pointer;">
                         <div class="product-image">
-                            <img src="<?php echo $prod['thumbnail_image'] ? APP_URL . '/uploads/products/' . $prod['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                            <img src="<?php echo $prod['thumbnail_image'] ? APP_URL . '/' . $prod['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                                  alt="<?php echo htmlspecialchars($prod['product_name']); ?>">
                             <?php if ($prod['discount_price']): ?>
                             <span class="badge badge-sale">Sale</span>

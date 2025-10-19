@@ -22,17 +22,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
             Utils::setFlashMessage('Invalid request', 'error');
         } else {
-            $updateData = [
-                'full_name' => trim($_POST['full_name']),
-                'phone' => trim($_POST['phone']),
-            ];
-            
-            $result = $user->updateProfile($userId, $updateData);
-            if ($result['success']) {
-                Utils::setFlashMessage('Profile updated successfully', 'success');
-                $userData = $user->getUserById($userId); // Refresh data
-            } else {
-                Utils::setFlashMessage($result['message'], 'error');
+            try {
+                $updateData = [
+                    'username' => trim($_POST['username']),
+                ];
+                
+                // Handle profile picture upload
+                if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+                    $imageUploader = new FileUpload(
+                        UPLOAD_DIR . '/profiles',
+                        ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+                        2 * 1024 * 1024 // 2MB max
+                    );
+                    
+                    $uploadResult = $imageUploader->upload($_FILES['profile_image']);
+                    if ($uploadResult['success']) {
+                        // Delete old profile image if exists
+                        if (!empty($userData['profile_image']) && file_exists(__DIR__ . '/' . $userData['profile_image'])) {
+                            @unlink(__DIR__ . '/' . $userData['profile_image']);
+                        }
+                        $updateData['profile_image'] = 'uploads/profiles/' . $uploadResult['file_name'];
+                    } else {
+                        throw new Exception('Profile image upload failed: ' . $uploadResult['message']);
+                    }
+                }
+                
+                $result = $user->updateProfile($userId, $updateData);
+                if ($result['success']) {
+                    Utils::setFlashMessage('Profile updated successfully', 'success');
+                    $userData = $user->getUserById($userId); // Refresh data
+                } else {
+                    Utils::setFlashMessage($result['message'], 'error');
+                }
+            } catch (Exception $e) {
+                Utils::setFlashMessage($e->getMessage(), 'error');
             }
         }
         header('Location: ' . APP_URL . '/profile.php');
@@ -73,6 +96,7 @@ $purchases = $db->fetchAll(
      FROM transactions t
      JOIN products p ON t.product_id = p.product_id
      WHERE t.buyer_id = :user_id
+     AND t.payment_status IN ('completed', 'failed')
      ORDER BY t.transaction_date DESC
      LIMIT 20",
     ['user_id' => $userId]
@@ -330,9 +354,17 @@ if (!isset($_SESSION['csrf_token'])) {
         <div class="profile-container">
             <!-- Sidebar -->
             <div class="profile-sidebar">
+                <?php if (!empty($userData['profile_image'])): ?>
+                <div style="width: 120px; height: 120px; margin: 0 auto 1rem;">
+                    <img src="<?php echo APP_URL . '/' . $userData['profile_image']; ?>" 
+                         alt="Profile" 
+                         style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--neon-cyan);">
+                </div>
+                <?php else: ?>
                 <div class="profile-avatar">
                     <?php echo strtoupper(substr($userData['full_name'] ?? $userData['username'], 0, 1)); ?>
                 </div>
+                <?php endif; ?>
                 <h2 class="profile-name"><?php echo htmlspecialchars($userData['full_name'] ?? $userData['username']); ?></h2>
                 <p class="profile-email"><?php echo htmlspecialchars($userData['email']); ?></p>
                 
@@ -397,10 +429,6 @@ if (!isset($_SESSION['csrf_token'])) {
                                 <span style="color: var(--text-primary); font-weight: 600;"><?php echo htmlspecialchars($userData['email']); ?></span>
                             </div>
                             <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-primary); border-radius: var(--radius-sm);">
-                                <span style="color: var(--text-muted);">Phone:</span>
-                                <span style="color: var(--text-primary); font-weight: 600;"><?php echo htmlspecialchars($userData['phone'] ?? 'Not set'); ?></span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; padding: 1rem; background: var(--bg-primary); border-radius: var(--radius-sm);">
                                 <span style="color: var(--text-muted);">Member Since:</span>
                                 <span style="color: var(--text-primary); font-weight: 600;"><?php echo date('F d, Y', strtotime($userData['created_at'])); ?></span>
                             </div>
@@ -411,30 +439,45 @@ if (!isset($_SESSION['csrf_token'])) {
                 <!-- Edit Profile Section -->
                 <div class="profile-section" id="profile">
                     <h2>Edit Profile</h2>
-                    <form method="POST" action="">
+                    <form method="POST" action="" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="update_profile">
                         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                         
                         <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" value="<?php echo htmlspecialchars($userData['username']); ?>" disabled>
-                            <small style="color: var(--text-muted);">Username cannot be changed</small>
+                            <label>Profile Picture</label>
+                            <?php if (!empty($userData['profile_image'])): ?>
+                            <div style="margin-bottom: 1rem;">
+                                <img src="<?php echo APP_URL . '/' . $userData['profile_image']; ?>" 
+                                     alt="Current profile" 
+                                     style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--neon-cyan);">
+                                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">Current profile picture</p>
+                            </div>
+                            <?php endif; ?>
+                            <input type="file" name="profile_image" accept="image/*" 
+                                   style="padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); width: 100%;">
+                            <small style="color: var(--text-muted);">Upload a new profile picture (JPG, PNG, GIF or WebP, max 2MB)</small>
                         </div>
                         
                         <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" value="<?php echo htmlspecialchars($userData['email']); ?>" disabled>
-                            <small style="color: var(--text-muted);">Email cannot be changed</small>
+                            <label>Username</label>
+                            <input type="text" name="username" value="<?php echo htmlspecialchars($userData['username']); ?>" 
+                                   required pattern="[a-zA-Z0-9_]{3,50}" 
+                                   style="padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); width: 100%;">
+                            <small style="color: var(--text-muted);">3-50 characters, letters, numbers and underscores only</small>
                         </div>
                         
                         <div class="form-group">
                             <label>Full Name</label>
-                            <input type="text" name="full_name" value="<?php echo htmlspecialchars($userData['full_name'] ?? ''); ?>" required>
+                            <input type="text" value="<?php echo htmlspecialchars($userData['full_name'] ?? ''); ?>" disabled
+                                   style="padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); width: 100%;">
+                            <small style="color: var(--text-muted);">Full name cannot be changed</small>
                         </div>
                         
                         <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" name="phone" value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>">
+                            <label>Email</label>
+                            <input type="email" value="<?php echo htmlspecialchars($userData['email']); ?>" disabled
+                                   style="padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); width: 100%;">
+                            <small style="color: var(--text-muted);">Email cannot be changed</small>
                         </div>
                         
                         <button type="submit" class="btn btn-primary">
@@ -488,7 +531,7 @@ if (!isset($_SESSION['csrf_token'])) {
                     <?php else: ?>
                         <?php foreach ($purchases as $purchase): ?>
                         <div class="purchase-item">
-                            <img src="<?php echo $purchase['thumbnail_image'] ? APP_URL . '/uploads/products/' . $purchase['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
+                            <img src="<?php echo $purchase['thumbnail_image'] ? APP_URL . '/' . $purchase['thumbnail_image'] : IMG_URL . '/placeholder.jpg'; ?>" 
                                  alt="<?php echo htmlspecialchars($purchase['product_name']); ?>"
                                  class="purchase-image">
                             
